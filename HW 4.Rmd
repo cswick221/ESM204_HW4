@@ -173,7 +173,17 @@ Use a discount rate of 2%
 #   mutate(damages_diff_co2 = damages_diff/pulse)
 
 policy <- warming %>% 
-  mutate()
+  select(-warming_pulse) %>% 
+  mutate(policya1 = warming_baseline) %>% 
+  mutate(policya2 = warming_baseline*1.5) %>% 
+  mutate(policyb = warming_baseline) %>% 
+  mutate(damagesa1 = predicted_damages$damages_baseline) %>% 
+  mutate(damagesa2 = quad_damages_fun(policya2))
+
+policy$policyb[policy$policyb > 1.29] <- 1.29
+
+policy <- policy %>% 
+  mutate(damagesb = quad_damages_fun(policyb))
 
 
 ```
