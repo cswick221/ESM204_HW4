@@ -33,7 +33,7 @@ pulse <- 35000000000
 damages$warming_sq <- damages$warming^2
 
 ### linear regression model using the new warming_sq and the original warming 
-quad_damages_lm <- lm(damages ~ 0 + warming + warming_sq, data = damages)
+quad_damages_lm <- lm(damages ~ warming + warming_sq -1, data = damages)
 
 ### damages function
 
@@ -95,7 +95,7 @@ plot_damages_diff_co2 <- ggplot(data = predicted_damages, aes(x = year, y = dama
 # Question 3
 ```{r fig.cap = "Figure 3"}
 ### set the baseline year
-baseline_year <- 2023
+baseline_year <- 2021
 
 ### calculate the present value of damages for each year with discount rates 1%-8%
 scc <- predicted_damages %>%
