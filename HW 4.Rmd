@@ -164,6 +164,17 @@ Use a discount rate of 2%
 ### What is the expected present value of damages up to 2100 under Policy A?
 
 ```{r}
+### Create columns a1, a2, b; calculate the discounted rate
+
+# predicted_damages <- warming %>%
+#   mutate(damages_baseline = quad_damages_fun(warming_baseline)) %>%
+#   mutate(damages_pulse = quad_damages_fun(warming_pulse)) %>%
+#   mutate(damages_diff = damages_pulse - damages_baseline) %>%
+#   mutate(damages_diff_co2 = damages_diff/pulse)
+
+policy <- warming %>% 
+  mutate()
+
 
 ```
 
