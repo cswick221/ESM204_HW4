@@ -1,0 +1,154 @@
+---
+title: "HW 4"
+author: "Ashley Cooper, Chloe Swick, and Eleanor Thomas"
+date: "June 2, 2023"
+output: 
+  html_document:
+    code_folding: hide
+    theme: yeti
+    collapsed: yes
+    smooth_scroll: yes
+---
+
+```{r setup, setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+library(tidyverse)
+library(here)
+library(janitor)
+library(patchwork)
+library(cowplot)
+library(equatiomatic)
+
+warming <- read.csv(here("data", "warming.csv"))
+damages <- read.csv(here("data", "damages.csv"))
+
+### set one-time pulse in carbon emissions
+pulse <- 35000000000
+```
+
+# Question 1
+```{r fig.cap="Figure 1"}
+### add a column to damages with warming squared
+damages$warming_sq <- damages$warming^2
+
+### linear regression model using the new warming_sq and the original warming 
+quad_damages_lm <- lm(damages ~ 0 + warming + warming_sq, data = damages)
+
+### damages function
+
+quad_damages_fun <- function(x){
+  quad_damages_lm$coefficients[1]*x+quad_damages_lm$coefficients[2]*x^2
+}
+
+### extract equation from damages model 
+extract_eq(model = quad_damages_lm, use_coefs = TRUE, coef_digits = 2)
+
+### plot 
+ggplot(data = damages, aes(x = warming, y = damages)) +
+  geom_point() +
+  theme_minimal() +
+  labs(x = "Warming (ºC)", y = "Damages ($)", title = "Damages vs. Global Mean Temperature Change") +
+  stat_function(fun = quad_damages_fun, color = "lightblue2")
+
+```
+
+
+# Question 2
+```{r fig.cap="Figure 2"}
+### predict damages in each year under the baseline climate trajectory and under the pulse scenario
+### add columns for baseline damages and pulse damages using damages function
+### then take the difference and difference/per ton CO2 from the pulse
+predicted_damages <- warming %>%
+  mutate(damages_baseline = quad_damages_fun(warming_baseline)) %>%
+  mutate(damages_pulse = quad_damages_fun(warming_pulse)) %>%
+  mutate(damages_diff = damages_pulse - damages_baseline) %>%
+  mutate(damages_diff_co2 = damages_diff/pulse)
+
+### plot the baseline damages
+plot_damages_no_pulse <- ggplot(data = predicted_damages, aes(x = year, y = damages_baseline)) +
+  geom_line(color = "gold") +
+  theme_minimal() +
+  labs(x = "Year", y = "Baseline Damages ($)")
+
+### plot the damages under the pulse scenario
+plot_damages_pulse <- ggplot(data = predicted_damages, aes(x = year, y = damages_pulse)) +
+  geom_line(color = "green4") +
+  theme_minimal() +
+  labs(x = "Year", y = "Damages + Pulse ($)")
+
+### plot the difference between baseline and pulse scenarios
+plot_damages_diff <- ggplot(data = predicted_damages, aes(x = year, y = damages_diff)) +
+  geom_line(color = "pink") +
+  theme_minimal() +
+  labs(x = "Year", y = "Difference in Damages + Pulse ($)")
+
+### plots the difference in damages over the pulse tons CO2
+plot_damages_diff_co2 <- ggplot(data = predicted_damages, aes(x = year, y = damages_diff_co2)) +
+  geom_line(color = "lightblue") +
+  theme_minimal() +
+  labs(x = "Year", y = "Difference in Damages + Pulse ($/ton CO2)")
+
+(plot_damages_no_pulse+plot_damages_pulse)/(plot_damages_diff+plot_damages_diff_co2)
+```
+
+# Question 3
+```{r fig.cap = "Figure 3"}
+### set the baseline year
+baseline_year <- 2023
+
+### calculate the present value of damages for each year with discount rates 1%-8%
+scc <- predicted_damages %>%
+  select(year, damages_diff_co2) %>%
+  mutate(pv_1 = damages_diff_co2*((1.01)^(-(year-baseline_year)))) %>%
+  mutate(pv_2 = damages_diff_co2*((1.02)^(-(year-baseline_year)))) %>%
+  mutate(pv_3 = damages_diff_co2*((1.03)^(-(year-baseline_year)))) %>%
+  mutate(pv_4 = damages_diff_co2*((1.04)^(-(year-baseline_year)))) %>%
+  mutate(pv_5 = damages_diff_co2*((1.05)^(-(year-baseline_year)))) %>%
+  mutate(pv_6 = damages_diff_co2*((1.06)^(-(year-baseline_year)))) %>%
+  mutate(pv_7 = damages_diff_co2*((1.07)^(-(year-baseline_year)))) %>%
+  mutate(pv_8 = damages_diff_co2*((1.08)^(-(year-baseline_year))))
+  
+### sum the damages from 2023-2100 to get scc for each discount rate
+scc_calc <- c(sum(scc$pv_1), sum(scc$pv_2),sum(scc$pv_3),sum(scc$pv_4),sum(scc$pv_5), sum(scc$pv_6),sum(scc$pv_7),sum(scc$pv_8))
+
+### create a dataframe with the summed scc calculations and discount rates
+disc_rates <- c(1:8)
+scc_df <- data.frame(disc_rates,
+                     scc_calc)
+
+### plot the scc by discount rate, add in ramsey scc from question 4 (150.43)
+### (put this here or question 4 or?)
+ggplot(data = scc_df, aes(x = disc_rates, y = scc_calc)) +
+  geom_point(color = "black") +
+  theme_minimal() +
+  labs(x = "Discount Rate (%)", y = "Social Cost of Carbon ($/ton of CO2)") +
+  geom_vline(xintercept=2.1, color = "turquoise") +
+  geom_label(aes(x=2.1, label="Ramsey Rule: SCC = $150.43", y=90), colour="turquoise", angle=90) +
+  geom_point(aes(x = 2.1, y = 150.43), color = "turquoise", size = 2.5)
+```
+
+
+# Question 4
+
+```{r}
+### define given parameters
+rho <- 0.001
+n <- 2
+g <- 0.01
+
+### calculate ramsey discount rate
+ramsey_dr <- (rho+n*g)*100
+
+### calcualte predicted damages with ramsey discount rate 
+predicted_damages_ramsey <- predicted_damages %>%
+  select(year, damages_diff_co2) %>%
+  mutate(pv_ramsey = damages_diff_co2*((1+(ramsey_dr/100))^(-(year-baseline_year))))
+
+### sum damages to get ramsey scc, see figure 3
+scc_ramsey <- sum(predicted_damages_ramsey$pv_ramsey)
+```
+
+# Question 5 
+
+
