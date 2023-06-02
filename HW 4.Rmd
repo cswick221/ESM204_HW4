@@ -109,7 +109,7 @@ scc <- predicted_damages %>%
   mutate(pv_7 = damages_diff_co2*((1.07)^(-(year-baseline_year)))) %>%
   mutate(pv_8 = damages_diff_co2*((1.08)^(-(year-baseline_year))))
   
-### sum the damages from 2023-2100 to get scc for each discount rate
+### sum the damages from 2021-2100 to get scc for each discount rate
 scc_calc <- c(sum(scc$pv_1), sum(scc$pv_2),sum(scc$pv_3),sum(scc$pv_4),sum(scc$pv_5), sum(scc$pv_6),sum(scc$pv_7),sum(scc$pv_8))
 
 ### create a dataframe with the summed scc calculations and discount rates
@@ -140,7 +140,7 @@ g <- 0.01
 ### calculate ramsey discount rate
 ramsey_dr <- (rho+n*g)*100
 
-### calcualte predicted damages with ramsey discount rate 
+### calculate predicted damages with ramsey discount rate 
 predicted_damages_ramsey <- predicted_damages %>%
   select(year, damages_diff_co2) %>%
   mutate(pv_ramsey = damages_diff_co2*((1+(ramsey_dr/100))^(-(year-baseline_year))))
@@ -161,7 +161,7 @@ Society is risk neutral
 
 Use a discount rate of 2%
 
-### What is the expected present value of damages up to 2100 under Policy A?
+
 
 ```{r}
 ### Create columns a1, a2, b; calculate the discounted rate
@@ -183,21 +183,45 @@ policy <- warming %>%
 policy$policyb[policy$policyb > 1.29] <- 1.29
 
 policy <- policy %>% 
-  mutate(damagesb = quad_damages_fun(policyb))
+  mutate(damagesb = quad_damages_fun(policyb)) %>% 
+  mutate(warming_a1 = damagesa1*((1.02)^(-(year-baseline_year)))) %>% 
+  mutate(warming_a2 = damagesa2*((1.02)^(-(year-baseline_year)))) %>% 
+  mutate(warming_b = damagesb*((1.02)^(-(year-baseline_year)))) 
 
 
 ```
+
+
+### What is the expected present value of damages up to 2100 under Policy A?
+$Expected PV of Damages A = .5(damages A1) + .5(damages A2)$
+\$6.19e+15
+```{r}
+expected_PV_A <- .5*sum(policy$warming_a1) + .5*sum(policy$warming_a2)
+expected_PV_A
+```
+
 
 #### What is the expected present value of damages up to 2100 under Policy B?
+$Expected PV of Damages B = sum(damages B)$ 
+\$1.59e+15
 ```{r}
-
+expected_PV_B <- sum(policy$warming_b)
+expected_PV_B
 ```
+
 
 #### Suppose undertaking Policy A costs zero and undertaking Policy B costs X. How large could X be for it to still make economic sense to pursue Policy B instead of Policy A?
+\$4.60e+15
 
 ```{r}
-
+cost_b <- expected_PV_A - expected_PV_B
+cost_b
 ```
 
+
 #### Qualitatively, how would your answer change if society were risk averse?
+If society was risk adverse, 
+
+
+
 
